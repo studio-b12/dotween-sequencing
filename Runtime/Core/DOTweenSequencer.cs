@@ -318,6 +318,31 @@ namespace Rehawk.DOTweenSequencing
         }
         
         /// <summary>
+        /// Ensures the sequence exists and is positioned at the start (time 0),
+        /// applying start values immediately.
+        /// </summary>
+        public void GotoStart(bool andPlay = false)
+        {
+            if (sequence == null)
+                Build();
+
+            sequence.Goto(0f, andPlay);
+        }
+
+        /// <summary>
+        /// Ensures the sequence exists and is positioned at the end (duration),
+        /// applying end values immediately.
+        /// </summary>
+        public void GotoEnd(bool andPlay = false)
+        {
+            if (sequence == null)
+                Build();
+
+            float end = sequence.Duration(includeLoops: false);
+            sequence.Goto(end, andPlay);
+        }
+        
+        /// <summary>
         /// Kills the current sequence, if any.
         /// </summary>
         /// <param name="complete">If true, completes the tween before killing (DOTween behaviour).</param>
