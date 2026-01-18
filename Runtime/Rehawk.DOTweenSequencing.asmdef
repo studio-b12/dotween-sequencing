@@ -1,0 +1,14 @@
+{
+    "name": "Rehawk.DOTweenSequencing",
+    "rootNamespace": "Rehawk.DOTweenSequencing",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

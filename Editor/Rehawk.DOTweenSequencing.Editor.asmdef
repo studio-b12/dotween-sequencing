@@ -1,0 +1,18 @@
+{
+    "name": "Rehawk.DOTweenSequencing.Editor",
+    "rootNamespace": "Rehawk.DOTweenSequencing.Editor",
+    "references": [
+        "GUID:e8adc5dca5ab9af468e3db4bad0a6466"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
