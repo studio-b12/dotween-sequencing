@@ -3,6 +3,8 @@
 
 **Inspector-driven** DOTween sequence builder with **reusable**, **type-safe** tween steps and advanced **editor tooling**.
 
+<img width="504" height="705" alt="image" src="https://github.com/user-attachments/assets/961dc08e-6b77-4f13-8696-5071d1fa95d8" />
+
 ## 📥 Installation
 
 #### Install via git URL
