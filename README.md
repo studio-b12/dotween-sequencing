@@ -150,12 +150,13 @@ These steps are thin, type-safe wrappers around the same extension methods you w
 ### Supported plugin step packages
 
 | DOTween Plugin  | Description                                           |
-| --------------- | ----------------------------------------------------- |
+|-----------------|-------------------------------------------------------|
 | **Audio**       | Volume fades, pitch changes, and audio-related tweens |
 | **Physics**     | Rigidbody position, rotation, and force-based tweens  |
 | **Physics2D**   | Rigidbody2D movement and rotation tweens              |
 | **Sprites**     | SpriteRenderer color and alpha tweens                 |
 | **TextMeshPro** | TMP text color, alpha, and text-related tweens        |
+| **UI**          | Canvas Group and co                                   |
 
 > [!IMPORTANT]
 > Some plugins will require the [**PRO**](https://dotween.demigiant.com/pro.php) version of DOTween.
