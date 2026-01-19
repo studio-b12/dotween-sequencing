@@ -6,18 +6,19 @@ namespace Rehawk.DOTweenSequencing
 {
     [Serializable]
     [TweenStepPath("Misc/SetActive")]
-    public class SetActiveStep : TweenStepBase
+    public class SetActiveStep : TweenStepBase<GameObject>
     {
-        [SerializeField] private GameObject targetObject;
         [SerializeField] private bool active = true;
 
         protected override Tween CreateTween()
         {
-            return DOVirtual.DelayedCall(0f, () =>
-            {
-                if (targetObject) 
-                    targetObject.SetActive(active);
-            });
+            if (!TryGetTarget(out GameObject obj)) 
+                return null;
+
+            return TweenStepUtils.CreateReversibleInstant(
+                onForward: () => obj.SetActive(active),
+                onBackwards: () => obj.SetActive(!active)
+            );
         }
     }
 }

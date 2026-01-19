@@ -8,14 +8,17 @@ namespace Rehawk.DOTweenSequencing
     [TweenStepPath("Misc/Enable Behaviour")]
     public class EnableComponentStep : TweenStepBase<Behaviour>
     {
-        [SerializeField] private bool enabledValue = true;
+        [SerializeField] private bool enabled = true;
 
         protected override Tween CreateTween()
         {
             if (!TryGetTarget(out Behaviour behaviour)) 
                 return null;
             
-            return DOVirtual.DelayedCall(0f, () => behaviour.enabled = enabledValue);
+            return TweenStepUtils.CreateReversibleInstant(
+                onForward: () => behaviour.enabled = enabled,
+                onBackwards: () => behaviour.enabled = !enabled
+            );
         }
     }
 }

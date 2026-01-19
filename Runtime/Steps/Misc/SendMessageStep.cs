@@ -6,18 +6,20 @@ namespace Rehawk.DOTweenSequencing
 {
     [Serializable]
     [TweenStepPath("Misc/SendMessage")]
-    public class SendMessageStep : TweenStepBase
+    public class SendMessageStep : TweenStepBase<GameObject>
     {
-        [SerializeField] private GameObject receiver;
-        [SerializeField] private string message = "OnTweenCallback";
+        [SerializeField] private string forwardMessage = "OnPlayForward";
+        [SerializeField] private string backwardsMessage = "OnPlayBackwards";
 
         protected override Tween CreateTween()
         {
-            return DOVirtual.DelayedCall(0f, () =>
-            {
-                if (receiver)
-                    receiver.SendMessage(message, SendMessageOptions.DontRequireReceiver);
-            });
+            if (!TryGetTarget(out GameObject receiver))
+                return null;
+            
+            return TweenStepUtils.CreateReversibleInstant(
+                onForward: () => receiver.SendMessage(forwardMessage, SendMessageOptions.DontRequireReceiver),
+                onBackwards: () => receiver.SendMessage(backwardsMessage, SendMessageOptions.DontRequireReceiver)
+            );
         }
     }
 }

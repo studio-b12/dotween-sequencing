@@ -9,14 +9,15 @@ namespace Rehawk.DOTweenSequencing
     [TweenStepPath("Misc/UnityEvent")]
     public class UnityEventStep : TweenStepBase
     {
-        [SerializeField] private UnityEvent onEntered;
+        [SerializeField] private UnityEvent onPlayForwards;
+        [SerializeField] private UnityEvent onPlayBackwards;
 
         protected override Tween CreateTween()
         {
-            return DOVirtual.DelayedCall(0f, () =>
-            {
-                onEntered?.Invoke();
-            });
+            return TweenStepUtils.CreateReversibleInstant(
+                onForward: () => onPlayForwards.Invoke(),
+                onBackwards: () => onPlayBackwards.Invoke()
+            );
         }
     }
 }
