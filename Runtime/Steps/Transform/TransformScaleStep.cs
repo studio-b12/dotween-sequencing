@@ -8,9 +8,9 @@ namespace Rehawk.DOTweenSequencing
     [TweenStepPath("Transform/Scale")]
     public class TransformScaleStep : TweenStepWithTweenOptions<Transform>
     {
-        [SerializeField] private Vector3Axes axes = Vector3Axes.X | Vector3Axes.Y | Vector3Axes.Z;
-        [SerializeField] private Vector3 endValue = Vector3.one;
         [SerializeField] private float duration = 0.5f;
+        [SerializeField] private Vector3Axes axes = Vector3Axes.X | Vector3Axes.Y | Vector3Axes.Z;
+        [SerializeField] private TweenValue<Vector3> values;
 
         protected override Tween CreateTween()
         {
@@ -22,11 +22,24 @@ namespace Rehawk.DOTweenSequencing
             
             Vector3 target = transform.localScale;
 
-            if (axes.HasFlag(Vector3Axes.X)) target.x = endValue.x;
-            if (axes.HasFlag(Vector3Axes.Y)) target.y = endValue.y;
-            if (axes.HasFlag(Vector3Axes.Z)) target.z = endValue.z;
+            if (axes.HasFlag(Vector3Axes.X)) target.x = values.To.x;
+            if (axes.HasFlag(Vector3Axes.Y)) target.y = values.To.y;
+            if (axes.HasFlag(Vector3Axes.Z)) target.z = values.To.z;
+
+            var tween = transform.DOScale(target, duration);
+
+            if (values.UseFrom)
+            {
+                Vector3 origin = transform.localScale;
+                
+                if (axes.HasFlag(Vector3Axes.X)) origin.x = values.From.x;
+                if (axes.HasFlag(Vector3Axes.Y)) origin.y = values.From.y;
+                if (axes.HasFlag(Vector3Axes.Z)) origin.z = values.From.z;
+
+                tween = tween.From(origin);
+            }
             
-            return transform.DOScale(target, duration);
+            return tween;
         }
     }
 }

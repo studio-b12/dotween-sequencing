@@ -10,9 +10,9 @@ namespace Rehawk.DOTweenSequencing
     [TweenStepPath("Rendering/Material/Color")]
     public class MaterialColorStep : TweenStepWithTweenOptions<Renderer>
     {
-        [SerializeField] private string property = "_Color";
-        [SerializeField] private Color endValue = Color.white;
         [SerializeField] private float duration = 0.5f;
+        [SerializeField] private string property = "_Color";
+        [SerializeField] private TweenValue<Color> values = new(Color.white);
 
         protected override Tween CreateTween()
         {
@@ -22,7 +22,14 @@ namespace Rehawk.DOTweenSequencing
             if (!renderer.sharedMaterial)
                 return null;
             
-            return renderer.material.DOColor(endValue, property, duration);
+            var tween = renderer.material.DOColor(values.To, duration);
+            
+            if (values.UseFrom)
+            {
+                tween = tween.From(values.From);
+            }
+            
+            return tween;
         }
     }
 }

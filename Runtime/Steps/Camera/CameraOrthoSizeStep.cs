@@ -8,15 +8,22 @@ namespace Rehawk.DOTweenSequencing
     [TweenStepPath("Camera/Ortho Size")]
     public class CameraOrthoSizeStep : TweenStepWithTweenOptions<Camera>
     {
-        [SerializeField] private float endValue = 5f;
         [SerializeField] private float duration = 0.5f;
+        [SerializeField] private TweenValue<float> values = new(5f);
 
         protected override Tween CreateTween()
         {
             if (!TryGetTarget(out Camera camera)) 
                 return null;
             
-            return camera.DOOrthoSize(endValue, duration);
+            var tween = camera.DOOrthoSize(values.To, duration);
+
+            if (values.UseFrom)
+            {
+                tween = tween.From(values.From);
+            }
+            
+            return tween;
         }
     }
 }

@@ -8,25 +8,39 @@ namespace Rehawk.DOTweenSequencing
     [TweenStepPath("Transform/Move")]
     public class TransformMoveStep : TweenStepWithTweenOptions<Transform>
     {
-        [SerializeField] private Vector3Axes axes = Vector3Axes.X | Vector3Axes.Y | Vector3Axes.Z;
-        [SerializeField] private Vector3 endValue;
         [SerializeField] private float duration = 0.5f;
         [SerializeField] private bool snapping = false;
+        [SerializeField] private Vector3Axes axes = Vector3Axes.X | Vector3Axes.Y | Vector3Axes.Z;
+        [SerializeField] private TweenValue<Vector3> values;
 
         protected override Tween CreateTween()
         {
-            if (!TryGetTarget(out Transform t)) return null;
+            if (!TryGetTarget(out Transform transform))
+                return null;
             
             if (axes == 0)
                 return null;
             
-            Vector3 target = t.position;
+            Vector3 target = transform.position;
 
-            if (axes.HasFlag(Vector3Axes.X)) target.x = endValue.x;
-            if (axes.HasFlag(Vector3Axes.Y)) target.y = endValue.y;
-            if (axes.HasFlag(Vector3Axes.Z)) target.z = endValue.z;
+            if (axes.HasFlag(Vector3Axes.X)) target.x = values.To.x;
+            if (axes.HasFlag(Vector3Axes.Y)) target.y = values.To.y;
+            if (axes.HasFlag(Vector3Axes.Z)) target.z = values.To.z;
 
-            return t.DOMove(target, duration, snapping);
+            var tween = transform.DOMove(target, duration, snapping);
+
+            if (values.UseFrom)
+            {
+                Vector3 origin = transform.position;
+                
+                if (axes.HasFlag(Vector3Axes.X)) origin.x = values.From.x;
+                if (axes.HasFlag(Vector3Axes.Y)) origin.y = values.From.y;
+                if (axes.HasFlag(Vector3Axes.Z)) origin.z = values.From.z;
+
+                tween = tween.From(origin);
+            }
+            
+            return tween;
         }
     }
 }

@@ -8,9 +8,9 @@ namespace Rehawk.DOTweenSequencing
     [TweenStepPath("Rendering/Material/Float")]
     public class MaterialFloatStep : TweenStepWithTweenOptions<Renderer>
     {
-        [SerializeField] private string property = "_Glossiness";
-        [SerializeField] private float endValue = 0f;
         [SerializeField] private float duration = 0.5f;
+        [SerializeField] private string property = "_Glossiness";
+        [SerializeField] private TweenValue<float> values = new(0f);
 
         protected override Tween CreateTween()
         {
@@ -20,7 +20,14 @@ namespace Rehawk.DOTweenSequencing
             if (!renderer.sharedMaterial)
                 return null;
 
-            return renderer.material.DOFloat(endValue, property, duration);
+            var tween = renderer.material.DOFloat(values.To, property, duration);
+
+            if (values.UseFrom)
+            {
+                tween = tween.From(values.From);
+            }
+            
+            return tween;
         }
     }
 }

@@ -8,15 +8,22 @@ namespace Rehawk.DOTweenSequencing
     [TweenStepPath("Camera/Field Of View")]
     public class CameraFovStep : TweenStepWithTweenOptions<Camera>
     {
-        [SerializeField] private float endValue = 60f;
         [SerializeField] private float duration = 0.5f;
+        [SerializeField] private TweenValue<float> values = new(60f);
 
         protected override Tween CreateTween()
         {
             if (!TryGetTarget(out Camera camera)) 
                 return null;
             
-            return camera.DOFieldOfView(endValue, duration);
+            var tween = camera.DOFieldOfView(values.To, duration);
+
+            if (values.UseFrom)
+            {
+                tween = tween.From(values.From);
+            }
+            
+            return tween;
         }
     }
 }

@@ -13,7 +13,9 @@ namespace Rehawk.DOTweenSequencing.Editor
         private const float HEADER_HEIGHT = 28f;
         private const float HEADER_PADDING = 6f;
         private const float BODY_PADDING = 6f;
-
+        private const float TYPE_LABEL_HEIGHT = 18f;
+        private const float TYPE_LABEL_SPACING = 4f;
+        
         private SerializedProperty playOnEnableProperty;
         private SerializedProperty restartOnEnableProperty;
 
@@ -80,6 +82,8 @@ namespace Rehawk.DOTweenSequencing.Editor
 
                             if (hasAnyPriority && hasRemaining)
                                 body += 6f;
+
+                            body += TYPE_LABEL_HEIGHT + TYPE_LABEL_SPACING;
 
                             h += body + BODY_PADDING;
                         }
@@ -159,7 +163,7 @@ namespace Rehawk.DOTweenSequencing.Editor
             serializedObject.ApplyModifiedProperties();
         }
 
-        private void DrawStepBlock(Rect rect, int index, SerializedProperty element)
+        private void DrawStepBlock(Rect rect, int index, SerializedProperty elementProperty)
         {
             rect.y += 2f;
             rect.height -= 4f;
@@ -171,30 +175,30 @@ namespace Rehawk.DOTweenSequencing.Editor
                                 out Rect titleRect, out Rect durationRect, out Rect placementRect);
             
             HandleHeaderContextClick(headerRect, enabledRect, titleRect, placementRect, index);
-            HandleHeaderMouse(headerRect, foldRect, enabledRect, titleRect, durationRect, placementRect, index, element);
+            HandleHeaderMouse(headerRect, foldRect, enabledRect, titleRect, durationRect, placementRect, index, elementProperty);
 
             DrawHeaderBackground(headerRect, index == selectedIndex);
-            DrawHeaderControls(element, foldRect, enabledRect, titleRect, durationRect, placementRect);
+            DrawHeaderTooltip(headerRect, elementProperty);
+            DrawHeaderControls(elementProperty, foldRect, enabledRect, titleRect, durationRect, placementRect);
 
-            if (element.isExpanded)
+            if (elementProperty.isExpanded)
             {
                 bodyRect.x += BODY_PADDING;
                 bodyRect.width -= BODY_PADDING * 2f;
                 bodyRect.y += 2f;
-                
-                DrawManagedRefChildrenPrioritized(bodyRect, element,
-                                                  priorityNames: new[] { "target", "delay", "duration" },
-                                                  excludeNames: new[] { "enabled", "title", "placement" });
 
+                string typeName = ShortTypeName(elementProperty.managedReferenceFullTypename);
+                string niceTypeName = ObjectNames.NicifyVariableName(StripStepSuffix(typeName));
+                string tooltip = elementProperty.managedReferenceFullTypename ?? "";
+
+                var typeRect = new Rect(bodyRect.x, bodyRect.y, bodyRect.width, TYPE_LABEL_HEIGHT);
+                EditorGUI.LabelField(typeRect, new GUIContent($"Type: {niceTypeName}", tooltip), EditorStyles.miniBoldLabel);
+
+                bodyRect.y += TYPE_LABEL_HEIGHT + TYPE_LABEL_SPACING;
+                bodyRect.height -= TYPE_LABEL_HEIGHT + TYPE_LABEL_SPACING;
+
+                DrawManagedRefChildrenPrioritized(bodyRect, elementProperty, stepPriorityProperties, stepExcludeProperties);
             }
-        }
-
-        private void DrawHeaderBackground(Rect rect, bool selected)
-        {
-            Color previousColor = GUI.color;
-            GUI.color = selected ? new Color(0.82f, 0.88f, 1f, 1f) : new Color(1f, 1f, 1f, 1f);
-            GUI.Box(rect, GUIContent.none, EditorStyles.helpBox);
-            GUI.color = previousColor;
         }
 
         private void HandleHeaderMouse(Rect headerRect, Rect foldRect, Rect enabledRect,
@@ -492,7 +496,21 @@ namespace Rehawk.DOTweenSequencing.Editor
         
         private static TweenStepClipboardData clipboard;
         private static Type[] stepTypesCache;
+        
+        private static readonly string[] stepExcludeProperties =
+        {
+            "enabled",
+            "title",
+            "placement"
+        };
 
+        private static readonly string[] stepPriorityProperties =
+        {
+            "target",
+            "delay",
+            "duration"
+        };
+        
         private static bool IsPlaybackOpen
         {
             get => EditorPrefs.GetBool("DOTweenSequencerEditor_IsPlaybackOpen", true);
@@ -599,6 +617,25 @@ namespace Rehawk.DOTweenSequencing.Editor
 
             float titleRight = placementRect.x - 8f;
             titleRect = new Rect(x, y, Mathf.Max(60f, titleRight - x), 18f);
+        }
+        
+        private static void DrawHeaderBackground(Rect rect, bool selected)
+        {
+            Color previousColor = GUI.color;
+            GUI.color = selected ? new Color(0.82f, 0.88f, 1f, 1f) : new Color(1f, 1f, 1f, 1f);
+            GUI.Box(rect, GUIContent.none, EditorStyles.helpBox);
+            GUI.color = previousColor;
+        }
+        
+        private static void DrawHeaderTooltip(Rect headerRect, SerializedProperty elementProperty)
+        {
+            string full = elementProperty.managedReferenceFullTypename ?? "";
+            string shortName = ShortTypeName(full);
+            string nice = ObjectNames.NicifyVariableName(StripStepSuffix(shortName));
+
+            string tooltip = $"{nice}\n\n({full})";
+
+            GUI.Label(headerRect, new GUIContent(string.Empty, tooltip));
         }
         
         private static object CreateDeepCopyFromProperty(SerializedProperty sourceProperty)

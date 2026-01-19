@@ -8,15 +8,22 @@ namespace Rehawk.DOTweenSequencing
     [TweenStepPath("Rendering/TrailRenderer/Time")]
     public class TrailRendererTimeStep : TweenStepWithTweenOptions<TrailRenderer>
     {
-        [SerializeField] private float endValue = 0.5f;
         [SerializeField] private float duration = 0.5f;
+        [SerializeField] private TweenValue<float> values = new(0.5f);
 
         protected override Tween CreateTween()
         {
             if (!TryGetTarget(out TrailRenderer trailRenderer))
                 return null;
             
-            return trailRenderer.DOTime(endValue, duration);
+            var tween = trailRenderer.DOTime(values.To, duration);
+
+            if (values.UseFrom)
+            {
+                tween = tween.From(values.From);
+            }
+            
+            return tween;
         }
     }
 }

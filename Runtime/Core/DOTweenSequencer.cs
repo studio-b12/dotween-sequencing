@@ -214,19 +214,21 @@ namespace Rehawk.DOTweenSequencing
         /// <param name="restartIfComplete">If true, restarts when the sequence is already complete.</param>
         public void Play(float multiplier, bool withCallbacks = true, bool restartIfComplete = true)
         {
-            if (sequence == null) 
+            if (sequence == null)
                 Build();
-            
-            LastDirection = PlayDirection.Forward;
-            
-            SetDurationMultiplier(multiplier);
 
-            if (restartIfComplete && sequence.IsComplete())
-                sequence.Restart(includeDelay: true);
+            LastDirection = PlayDirection.Forward;
+            SetDurationMultiplier(multiplier);
 
             if (multiplier <= 0f)
             {
-                sequence.Complete(withCallbacks: withCallbacks);
+                sequence.Complete(withCallbacks);
+                return;
+            }
+
+            if (restartIfComplete && sequence.IsComplete())
+            {
+                sequence.Restart(includeDelay: true);
                 return;
             }
 
@@ -249,24 +251,23 @@ namespace Rehawk.DOTweenSequencing
         /// <param name="goToEndIfAtStart">If true and the sequence is at time 0, jumps to the end before playing backwards.</param>
         public void PlayBackwards(float multiplier, bool goToEndIfAtStart = true)
         {
-            if (sequence == null) 
+            if (sequence == null)
                 Build();
 
             LastDirection = PlayDirection.Backward;
-            
             SetDurationMultiplier(multiplier);
-            
+
+            if (multiplier <= 0f)
+            {
+                sequence.Goto(0f, andPlay: false);
+                sequence.Rewind();
+                return;
+            }
+
             if (goToEndIfAtStart && Mathf.Approximately(sequence.Elapsed(), 0f))
             {
                 float end = sequence.Duration(includeLoops: false);
                 sequence.Goto(end, andPlay: false);
-            }
-            
-            if (multiplier <= 0f)
-            {
-                sequence.Goto(0f, andPlay: false);
-                sequence.Rewind(); // Fires rewind event
-                return;
             }
 
             sequence.PlayBackwards();

@@ -8,11 +8,11 @@ namespace Rehawk.DOTweenSequencing
     [TweenStepPath("Transform/LookAt")]
     public class TransformLookAtStep : TweenStepWithTweenOptions<Transform>
     {
-        [SerializeField] private Vector3Axes axes = Vector3Axes.X | Vector3Axes.Y | Vector3Axes.Z;
-        [SerializeField] private Vector3 worldPosition;
         [SerializeField] private float duration = 0.5f;
         [SerializeField] private AxisConstraint axisConstraint = AxisConstraint.None;
         [SerializeField] private Vector3 up = Vector3.up;
+        [SerializeField] private Vector3Axes axes = Vector3Axes.X | Vector3Axes.Y | Vector3Axes.Z;
+        [SerializeField] private Vector3 worldPosition;
 
         protected override Tween CreateTween()
         {

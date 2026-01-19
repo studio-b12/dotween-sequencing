@@ -8,15 +8,22 @@ namespace Rehawk.DOTweenSequencing
     [TweenStepPath("Transform/Rotate Quaternion")]
     public class TransformRotateQuaternionStep : TweenStepWithTweenOptions<Transform>
     {
-        [SerializeField] private Quaternion endValue = Quaternion.identity;
+        [SerializeField] private TweenValue<Quaternion> values;
         [SerializeField] private float duration = 0.5f;
 
         protected override Tween CreateTween()
         {
             if (!TryGetTarget(out Transform transform))
                 return null;
-            
-            return transform.DORotateQuaternion(endValue, duration);
+
+            var tween = transform.DORotateQuaternion(values.To, duration);
+
+            if (values.UseFrom)
+            {
+                tween = tween.From(values.From);
+            }
+
+            return tween;
         }
     }
 }
