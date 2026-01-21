@@ -539,14 +539,12 @@ namespace Rehawk.DOTweenSequencing.Editor
         {
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
-            // Header rect INSIDE the box
             var headerRect = GUILayoutUtility.GetRect(GUIContent.none, EditorStyles.boldLabel, 
                                                       GUILayout.Height(EditorGUIUtility.singleLineHeight));
 
             const float leftPadding = 0f;
             const float rightPadding = 6f;
             
-            // Slight padding so text aren't glued to the edge
             headerRect.x += leftPadding;
             headerRect.width -= leftPadding + rightPadding;
 
@@ -563,18 +561,15 @@ namespace Rehawk.DOTweenSequencing.Editor
         {
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
-            // Header rect INSIDE the box
             var headerRect = GUILayoutUtility.GetRect(GUIContent.none, EditorStyles.boldLabel, 
                                                       GUILayout.Height(EditorGUIUtility.singleLineHeight));
 
             const float leftPadding = 12f;
             const float rightPadding = 6f;
             
-            // Slight padding so arrow + text aren't glued to the edge
             headerRect.x += leftPadding;
             headerRect.width -= leftPadding + rightPadding;
 
-            // Draw foldout arrow + bold title
             state = EditorGUI.Foldout(headerRect, state, title, true, EditorStyles.boldLabel);
 
             if (state)
