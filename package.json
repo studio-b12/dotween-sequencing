@@ -1,6 +1,6 @@
 {
     "name": "com.rehawk.dotween-sequencing",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "displayName": "DOTween Sequencing",
     "description": "Inspector-driven DOTween sequence builder with reusable, type-safe tween steps and advanced editor tooling.",
     "unity": "2021.3",
