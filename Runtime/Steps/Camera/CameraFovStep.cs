@@ -5,10 +5,11 @@ using UnityEngine;
 namespace Rehawk.DOTweenSequencing
 {
     [Serializable]
-    [TweenStepPath("Camera/Field Of View")]
+    [TweenStep("Camera/Field Of View")]
     public class CameraFovStep : TweenStepWithTweenOptions<Camera>
     {
         [SerializeField] private float duration = 0.5f;
+        [TweenValueDrawer("Field Of View")]
         [SerializeField] private TweenValue<float> values = new(60f);
 
         protected override Tween CreateTween()

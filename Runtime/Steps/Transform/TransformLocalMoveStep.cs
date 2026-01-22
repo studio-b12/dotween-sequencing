@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Rehawk.DOTweenSequencing
 {
     [Serializable]
-    [TweenStepPath("Transform/Move Local")]
+    [TweenStep("Transform/Move Local")]
     public class TransformLocalMoveStep : TweenStepWithTweenOptions<Transform>
     {
         [SerializeField] private float duration = 0.5f;

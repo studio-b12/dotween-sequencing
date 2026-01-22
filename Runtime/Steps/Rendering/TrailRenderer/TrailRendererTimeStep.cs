@@ -5,10 +5,11 @@ using UnityEngine;
 namespace Rehawk.DOTweenSequencing
 {
     [Serializable]
-    [TweenStepPath("Rendering/TrailRenderer/Time")]
+    [TweenStep("Rendering/TrailRenderer/Time")]
     public class TrailRendererTimeStep : TweenStepWithTweenOptions<TrailRenderer>
     {
         [SerializeField] private float duration = 0.5f;
+        [TweenValueDrawer("Time")]
         [SerializeField] private TweenValue<float> values = new(0.5f);
 
         protected override Tween CreateTween()

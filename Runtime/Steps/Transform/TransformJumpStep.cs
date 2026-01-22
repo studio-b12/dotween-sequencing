@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Rehawk.DOTweenSequencing
 {
     [Serializable]
-    [TweenStepPath("Transform/Jump")]
+    [TweenStep("Transform/Jump")]
     public class TransformJumpStep : TweenStepWithTweenOptions<Transform>
     {
         [SerializeField] private Vector3Axes axes = Vector3Axes.X | Vector3Axes.Y | Vector3Axes.Z;

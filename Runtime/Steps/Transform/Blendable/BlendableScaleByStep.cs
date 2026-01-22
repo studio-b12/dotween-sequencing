@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Rehawk.DOTweenSequencing
 {
     [Serializable]
-    [TweenStepPath("Transform/Blendable/Scale By")]
+    [TweenStep("Transform/Blendable/Scale By")]
     public class BlendableScaleByStep : TweenStepWithTweenOptions<Transform>
     {
         [SerializeField] private Vector3 by = Vector3.one * 0.2f;

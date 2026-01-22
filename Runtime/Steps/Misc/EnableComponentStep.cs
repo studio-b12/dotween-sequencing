@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Rehawk.DOTweenSequencing
 {
     [Serializable]
-    [TweenStepPath("Misc/Enable Behaviour")]
+    [TweenStep("Misc/Enable Behaviour")]
     public class EnableComponentStep : TweenStepBase<Behaviour>
     {
         [SerializeField] private bool enabled = true;

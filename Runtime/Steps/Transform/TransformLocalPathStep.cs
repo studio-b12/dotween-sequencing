@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Rehawk.DOTweenSequencing
 {
     [Serializable]
-    [TweenStepPath("Transform/Path/Local")]
+    [TweenStep("Transform/Path/Local")]
     public class TransformLocalPathStep : TweenStepWithTweenOptions<Transform>
     {
         [SerializeField] private Vector3[] waypoints = new Vector3[2];

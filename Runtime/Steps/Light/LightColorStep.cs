@@ -5,10 +5,11 @@ using UnityEngine;
 namespace Rehawk.DOTweenSequencing
 {
     [Serializable]
-    [TweenStepPath("Light/Color")]
+    [TweenStep("Light/Color")]
     public class LightColorStep : TweenStepWithTweenOptions<Light>
     {
         [SerializeField] private float duration = 0.5f;
+        [TweenValueDrawer("Color")]
         [SerializeField] private TweenValue<Color> values = new(Color.white);
 
         protected override Tween CreateTween()

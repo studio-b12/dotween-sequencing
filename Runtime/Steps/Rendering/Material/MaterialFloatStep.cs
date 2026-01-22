@@ -5,11 +5,12 @@ using UnityEngine;
 namespace Rehawk.DOTweenSequencing
 {
     [Serializable]
-    [TweenStepPath("Rendering/Material/Float")]
+    [TweenStep("Rendering/Material/Float")]
     public class MaterialFloatStep : TweenStepWithTweenOptions<Renderer>
     {
         [SerializeField] private float duration = 0.5f;
         [SerializeField] private string property = "_Glossiness";
+        [TweenValueDrawer("Glossiness")]
         [SerializeField] private TweenValue<float> values = new(0f);
 
         protected override Tween CreateTween()

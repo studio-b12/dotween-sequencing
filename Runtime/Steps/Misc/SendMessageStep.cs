@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Rehawk.DOTweenSequencing
 {
     [Serializable]
-    [TweenStepPath("Misc/SendMessage")]
+    [TweenStep("Misc/SendMessage")]
     public class SendMessageStep : TweenStepBase<GameObject>
     {
         [SerializeField] private string forwardMessage = "OnPlayForward";

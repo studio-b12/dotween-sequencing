@@ -6,7 +6,7 @@ using UnityEngine.Events;
 namespace Rehawk.DOTweenSequencing
 {
     [Serializable]
-    [TweenStepPath("Misc/UnityEvent")]
+    [TweenStep("Misc/UnityEvent")]
     public class UnityEventStep : TweenStepBase
     {
         [SerializeField] private UnityEvent onPlayForwards;

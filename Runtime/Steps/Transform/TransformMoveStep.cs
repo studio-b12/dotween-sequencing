@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Rehawk.DOTweenSequencing
 {
     [Serializable]
-    [TweenStepPath("Transform/Move")]
+    [TweenStep("Transform/Move")]
     public class TransformMoveStep : TweenStepWithTweenOptions<Transform>
     {
         [SerializeField] private float duration = 0.5f;
@@ -43,4 +43,32 @@ namespace Rehawk.DOTweenSequencing
             return tween;
         }
     }
+    
+    // [Serializable]
+    // [TweenStep("Transform/Move")]
+    // public class TransformMoveStep : TweenStepWithTweenOptions<Transform>
+    // {
+    //     [SerializeField] private float duration = 0.5f;
+    //     [SerializeField] private bool snapping = false;
+    //     [SerializeField] private TweenVector3 values;
+    //
+    //     protected override Tween CreateTween()
+    //     {
+    //         if (!TryGetTarget(out Transform transform))
+    //             return null;
+    //         
+    //         if (values == null || !values.AnyAxes())
+    //             return null;
+    //         
+    //         Vector3 current = transform.position;
+    //         
+    //         Vector3 target = current.ApplyTo(values);
+    //         TweenerCore<Vector3, Vector3, VectorOptions> tween = transform.DOMove(target, duration, snapping);
+    //
+    //         if (TweenVectorAxesUtils.TryBuildFrom(current, values, out Vector3 origin))
+    //             tween = tween.From(origin);
+    //
+    //         return tween;
+    //     }
+    // }
 }

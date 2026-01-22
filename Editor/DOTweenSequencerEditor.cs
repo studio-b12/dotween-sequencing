@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEditorInternal;
@@ -15,6 +16,8 @@ namespace Rehawk.DOTweenSequencing.Editor
         private const float BODY_PADDING = 6f;
         private const float TYPE_LABEL_HEIGHT = 18f;
         private const float TYPE_LABEL_SPACING = 4f;
+        private const float PROGRESS_BAR_HEIGHT = 8f;
+        private const float PROGRESS_BAR_SPACING = 4f;
         
         private SerializedProperty playOnEnableProperty;
         private SerializedProperty restartOnEnableProperty;
@@ -39,7 +42,10 @@ namespace Rehawk.DOTweenSequencing.Editor
         private AdvancedDropdownState addDropdownState;
 
         private int selectedIndex = -1;
-
+        private bool lastShowBars;
+            
+        private readonly List<StepTiming> stepTimings = new();
+        
         private void OnEnable()
         {
             playOnEnableProperty = serializedObject.FindProperty("playOnEnable");
@@ -62,50 +68,9 @@ namespace Rehawk.DOTweenSequencing.Editor
             onRewindProperty = serializedObject.FindProperty("onRewound");
             
             addDropdownState ??= new AdvancedDropdownState();
-
-            stepsList = new ReorderableList(serializedObject, stepsProperty, true, false, true, true)
-                {
-                    elementHeightCallback = i =>
-                    {
-                        SerializedProperty elementProperty = stepsProperty.GetArrayElementAtIndex(i);
-                        float h = HEADER_HEIGHT + 6f;
-
-                        if (elementProperty.isExpanded)
-                        {
-                            string[] exclude = { "enabled", "title", "placement" };
-                            string[] priority = { "target", "delay", "duration" };
-
-                            float body = GetManagedRefChildrenHeight(elementProperty, excludeNames: exclude);
-
-                            bool hasAnyPriority = priority.Any(n => elementProperty.FindPropertyRelative(n) != null);
-                            bool hasRemaining = HasAnyDrawableChildren(elementProperty, CombineExcludes(exclude, priority));
-
-                            if (hasAnyPriority && hasRemaining)
-                                body += 6f;
-
-                            body += TYPE_LABEL_HEIGHT + TYPE_LABEL_SPACING;
-
-                            h += body + BODY_PADDING;
-                        }
-
-                        return h;
-                    },
-                    drawElementCallback = (r, i, a, f) =>
-                    {
-                        SerializedProperty elementProperty = stepsProperty.GetArrayElementAtIndex(i);
-                        DrawStepBlock(r, i, elementProperty);
-                    },
-                    onAddDropdownCallback = (buttonRect, list) =>
-                    {
-                        var dropdown = new TweenStepAdvancedDropdown(addDropdownState, GetConcreteStepTypes(), AddStep);
-                        dropdown.Show(buttonRect);
-                    },
-                    onRemoveCallback = list =>
-                    {
-                        if (EditorUtility.DisplayDialog("Remove step?", "Remove the selected step?", "Remove", "Cancel"))
-                            ReorderableList.defaultBehaviours.DoRemoveButton(list);
-                    }
-                };
+            
+            lastShowBars = ShouldShowProgressBars();
+            BuildStepsList();
         }
 
         public override void OnInspectorGUI()
@@ -136,15 +101,34 @@ namespace Rehawk.DOTweenSequencing.Editor
 
             IsStepsOpen = DrawFoldoutBlock("Steps", IsStepsOpen, () =>
             {
+                RebuildStepTimings();
+                
                 float baseTotal = EstimateTotalSequenceLengthSeconds(stepsProperty);
-                float mult = Mathf.Max(0f, durationMultiplierProperty.floatValue);
+                float multiplier = Mathf.Max(0f, durationMultiplierProperty.floatValue);
 
-                float effectiveTotal = mult <= 0f ? 0f : baseTotal * mult;
+                float effectiveTotal = multiplier <= 0f ? 0f : baseTotal * multiplier;
 
-                EditorGUILayout.LabelField($"Estimated Duration: {effectiveTotal:0.###}s  (base {baseTotal:0.###}s × {mult:0.###})",
+                EditorGUILayout.LabelField($"Estimated Duration: {effectiveTotal:0.###}s  (base {baseTotal:0.###}s × {multiplier:0.###})",
                                            EditorStyles.miniBoldLabel);
-
+                
+                bool showBars = ShouldShowProgressBars();
+                if (showBars != lastShowBars)
+                {
+                    lastShowBars = showBars;
+                    BuildStepsList();
+                    Repaint();
+                }
+                
                 stepsList.DoLayoutList();
+                
+                using (new EditorGUI.DisabledScope(clipboard == null))
+                {
+                    if (GUILayout.Button("Add From Clipboard")) PasteAddStep();
+                }
+                
+                // Repaint while playing so bars animate
+                if (Application.isPlaying)
+                    Repaint();
             });
 
             IsEventsOpen = DrawFoldoutBlock("Events", IsEventsOpen, () =>
@@ -163,17 +147,71 @@ namespace Rehawk.DOTweenSequencing.Editor
             serializedObject.ApplyModifiedProperties();
         }
 
+        private void BuildStepsList()
+        {
+            stepsList = new ReorderableList(serializedObject, stepsProperty, true, false, true, true)
+                {
+                    elementHeightCallback = i =>
+                    {
+                        SerializedProperty elementProperty = stepsProperty.GetArrayElementAtIndex(i);
+
+                        bool showBars = ShouldShowProgressBars();
+
+                        float height = HEADER_HEIGHT;
+
+                        if (showBars)
+                        {
+                            height += 4f + PROGRESS_BAR_HEIGHT + PROGRESS_BAR_SPACING;
+                        }
+                        else
+                        {
+                            height += 6f;
+                        }
+
+                        if (!elementProperty.isExpanded)
+                            return height;
+
+                        float body = GetManagedRefChildrenHeight(elementProperty, stepExcludeProperties);
+
+                        bool hasAnyPriority = stepPriorityProperties.Any(n => elementProperty.FindPropertyRelative(n) != null);
+                        bool hasRemaining = HasAnyDrawableChildren(elementProperty, CombineExcludes(stepExcludeProperties, stepPriorityProperties));
+
+                        if (hasAnyPriority && hasRemaining)
+                            body += 6f;
+
+                        body += TYPE_LABEL_HEIGHT + TYPE_LABEL_SPACING;
+
+                        height += body + BODY_PADDING;
+                        return height;
+                    },
+                    drawElementCallback = (r, i, a, f) =>
+                    {
+                        SerializedProperty elementProperty = stepsProperty.GetArrayElementAtIndex(i);
+                        DrawStepBlock(r, i, elementProperty);
+                    },
+                    onAddDropdownCallback = (buttonRect, list) =>
+                    {
+                        var dropdown = new TweenStepAdvancedDropdown(addDropdownState, GetConcreteStepTypes(), AddStep);
+                        dropdown.Show(buttonRect);
+                    },
+                    onRemoveCallback = list =>
+                    {
+                        if (EditorUtility.DisplayDialog("Remove step?", "Remove the selected step?", "Remove", "Cancel"))
+                            ReorderableList.defaultBehaviours.DoRemoveButton(list);
+                    }
+                };
+        }
+
         private void DrawStepBlock(Rect rect, int index, SerializedProperty elementProperty)
         {
             rect.y += 2f;
             rect.height -= 4f;
 
             var headerRect = new Rect(rect.x, rect.y, rect.width, HEADER_HEIGHT);
-            var bodyRect = new Rect(rect.x, rect.y + HEADER_HEIGHT + 4f, rect.width, rect.height - HEADER_HEIGHT - 4f);
 
-            ComputeHeaderLayout(headerRect, out Rect foldRect, out Rect enabledRect, 
+            ComputeHeaderLayout(headerRect, out Rect foldRect, out Rect enabledRect,
                                 out Rect titleRect, out Rect durationRect, out Rect placementRect);
-            
+
             HandleHeaderContextClick(headerRect, enabledRect, titleRect, placementRect, index);
             HandleHeaderMouse(headerRect, foldRect, enabledRect, titleRect, durationRect, placementRect, index, elementProperty);
 
@@ -181,24 +219,39 @@ namespace Rehawk.DOTweenSequencing.Editor
             DrawHeaderTooltip(headerRect, elementProperty);
             DrawHeaderControls(elementProperty, foldRect, enabledRect, titleRect, durationRect, placementRect);
 
-            if (elementProperty.isExpanded)
+            bool showBars = ShouldShowProgressBars();
+
+            Rect barRect = default;
+            if (showBars)
             {
-                bodyRect.x += BODY_PADDING;
-                bodyRect.width -= BODY_PADDING * 2f;
-                bodyRect.y += 2f;
-
-                string typeName = ShortTypeName(elementProperty.managedReferenceFullTypename);
-                string niceTypeName = ObjectNames.NicifyVariableName(StripStepSuffix(typeName));
-                string tooltip = elementProperty.managedReferenceFullTypename ?? "";
-
-                var typeRect = new Rect(bodyRect.x, bodyRect.y, bodyRect.width, TYPE_LABEL_HEIGHT);
-                EditorGUI.LabelField(typeRect, new GUIContent($"Type: {niceTypeName}", tooltip), EditorStyles.miniBoldLabel);
-
-                bodyRect.y += TYPE_LABEL_HEIGHT + TYPE_LABEL_SPACING;
-                bodyRect.height -= TYPE_LABEL_HEIGHT + TYPE_LABEL_SPACING;
-
-                DrawManagedRefChildrenPrioritized(bodyRect, elementProperty, stepPriorityProperties, stepExcludeProperties);
+                barRect = GetProgressBarSlotRect(rect);
+                DrawProgressBar(barRect, index);
             }
+
+            if (!elementProperty.isExpanded)
+                return;
+
+            float bodyTop = showBars ? (barRect.yMax + PROGRESS_BAR_SPACING) : (rect.y + HEADER_HEIGHT + 4f);
+            var bodyRect = new Rect(rect.x, bodyTop, rect.width, rect.height - (bodyTop - rect.y));
+
+            bodyRect.x += BODY_PADDING;
+            bodyRect.width -= BODY_PADDING * 2f;
+            bodyRect.y += 2f;
+
+            string typeName = ShortTypeName(elementProperty.managedReferenceFullTypename);
+            string niceTypeName = ObjectNames.NicifyVariableName(StripStepSuffix(typeName));
+            string tooltip = elementProperty.managedReferenceFullTypename ?? "";
+
+            var typeRect = new Rect(bodyRect.x, bodyRect.y, bodyRect.width, TYPE_LABEL_HEIGHT);
+            EditorGUI.LabelField(typeRect, new GUIContent($"Type: {niceTypeName}", tooltip), EditorStyles.miniBoldLabel);
+
+            float nextY = typeRect.yMax + TYPE_LABEL_SPACING;
+            float deltaY = nextY - bodyRect.y;
+
+            bodyRect.y = nextY;
+            bodyRect.height = Mathf.Max(0f, bodyRect.height - deltaY);
+
+            DrawManagedRefChildrenPrioritized(bodyRect, elementProperty, stepPriorityProperties, stepExcludeProperties);
         }
 
         private void HandleHeaderMouse(Rect headerRect, Rect foldRect, Rect enabledRect,
@@ -333,7 +386,95 @@ namespace Rehawk.DOTweenSequencing.Editor
                 placementProperty.enumValueIndex = newIndex;
             }
         }
+        
+        private bool ShouldShowProgressBars()
+        {
+            if (!Application.isPlaying)
+                return false;
 
+            var sequencer = (DOTweenSequencer)target;
+            return sequencer != null && sequencer.HasSequence;
+        }
+        
+        private void DrawProgressBar(Rect barRect, int index)
+        {
+            if (!Application.isPlaying)
+                return;
+
+            var sequencer = (DOTweenSequencer)target;
+            if (sequencer == null || !sequencer.HasSequence)
+                return;
+
+            if (index < 0 || index >= stepTimings.Count)
+                return;
+
+            StepTiming timing = stepTimings[index];
+            float time = sequencer.EditorElapsed;
+
+            // Colors
+            Color backgroundColor = EditorGUIUtility.isProSkin ? new Color(1f, 1f, 1f, 0.10f) : new Color(0f, 0f, 0f, 0.10f);
+            Color fillerColor     = EditorGUIUtility.isProSkin ? new Color(0.30f, 0.65f, 1.00f, 0.85f) : new Color(0.20f, 0.45f, 0.90f, 0.85f);
+
+            Color delayBackground = EditorGUIUtility.isProSkin ? new Color(1f, 0.85f, 0.20f, 0.18f) : new Color(1f, 0.75f, 0.10f, 0.22f);
+            Color delayFiller     = EditorGUIUtility.isProSkin ? new Color(1f, 0.70f, 0.10f, 0.75f) : new Color(0.95f, 0.60f, 0.05f, 0.80f);
+
+            // Always draw base background
+            EditorGUI.DrawRect(barRect, backgroundColor);
+
+            float totalLength = Mathf.Max(0f, timing.End - timing.ScheduledStart);
+            float delayLength = Mathf.Max(0f, timing.DelayEnd - timing.ScheduledStart);
+            float durationLength = Mathf.Max(0f, timing.End - timing.DelayEnd);
+
+            // Special case: zero-length step -> show "instant" completion as a tiny fill once reached
+            if (totalLength <= 0f)
+            {
+                // If we've reached/passed the scheduled start, show it as complete
+                if (time >= timing.ScheduledStart)
+                {
+                    // Fill the whole bar, or just a tiny tick if you prefer
+                    EditorGUI.DrawRect(barRect, fillerColor);
+                }
+
+                DrawProgressBarBorder(barRect);
+                return;
+            }
+
+            // Delay region background tint
+            if (delayLength > 0f)
+            {
+                float delayWidth = barRect.width * Mathf.Clamp01(delayLength / totalLength);
+                var delayRect = new Rect(barRect.x, barRect.y, delayWidth, barRect.height);
+                EditorGUI.DrawRect(delayRect, delayBackground);
+            }
+
+            // Delay fill
+            if (delayLength > 0f)
+            {
+                float delayFill = Mathf.Clamp01((time - timing.ScheduledStart) / delayLength);
+                float delaySegmentW = barRect.width * Mathf.Clamp01(delayLength / totalLength);
+                float w = delaySegmentW * delayFill;
+
+                if (w > 0f)
+                    EditorGUI.DrawRect(new Rect(barRect.x, barRect.y, w, barRect.height), delayFiller);
+            }
+
+            // Duration fill
+            {
+                float delaySegmentW = barRect.width * Mathf.Clamp01(delayLength / totalLength);
+                float durSegmentW = barRect.width - delaySegmentW;
+
+                float durFill = (durationLength <= 0f)
+                    ? (time >= timing.DelayEnd ? 1f : 0f)
+                    : Mathf.Clamp01((time - timing.DelayEnd) / durationLength);
+
+                float w = durSegmentW * durFill;
+                if (w > 0f)
+                    EditorGUI.DrawRect(new Rect(barRect.x + delaySegmentW, barRect.y, w, barRect.height), fillerColor);
+            }
+
+            DrawProgressBarBorder(barRect);
+        }
+        
         private void ShowStepContextMenu(int index)
         {
             var menu = new GenericMenu();
@@ -347,15 +488,15 @@ namespace Rehawk.DOTweenSequencing.Editor
                 menu.ShowAsContext();
                 return;
             }
-
+            
             menu.AddItem(new GUIContent("Duplicate"), false, () => DuplicateStep(index));
             menu.AddSeparator("");
-
+            
             menu.AddItem(new GUIContent("Copy"), false, () => CopyStep(index));
-
+            
             if (canPaste)
             {
-                menu.AddItem(new GUIContent("Paste (Replace)"), false, () => PasteStep(index));
+                menu.AddItem(new GUIContent("Paste (Replace)"), false, () => PasteStepReplace(index));
             }
             else
             {
@@ -368,13 +509,59 @@ namespace Rehawk.DOTweenSequencing.Editor
             menu.ShowAsContext();
         }
 
+        private void RebuildStepTimings()
+        {
+            stepTimings.Clear();
+
+            if (stepsProperty == null || !stepsProperty.isArray)
+                return;
+
+            float cursor = 0f;
+            float lastAppendStart = 0f;
+
+            for (int i = 0; i < stepsProperty.arraySize; i++)
+            {
+                SerializedProperty stepProperty = stepsProperty.GetArrayElementAtIndex(i);
+
+                SerializedProperty placementProperty = stepProperty.FindPropertyRelative("placement");
+                TweenPlacement placement = (TweenPlacement)(placementProperty?.enumValueIndex ?? 0);
+
+                float delay = (stepProperty.managedReferenceValue == null) ? 0f : GetStepDelaySeconds(stepProperty);
+                float duration = (stepProperty.managedReferenceValue == null) ? 0f : GetStepDurationSeconds(stepProperty);
+
+                float scheduledStart = placement == TweenPlacement.Join ? lastAppendStart : cursor;
+                float occupiedLength = delay + duration;
+
+                if (placement == TweenPlacement.Join)
+                {
+                    cursor = Mathf.Max(cursor, scheduledStart + occupiedLength);
+                }
+                else
+                {
+                    lastAppendStart = scheduledStart;
+                    cursor = scheduledStart + occupiedLength;
+                }
+
+                float delayEnd = scheduledStart + delay;
+                float end = delayEnd + duration;
+
+                stepTimings.Add(new StepTiming
+                {
+                    ScheduledStart = scheduledStart,
+                    DelayEnd = delayEnd,
+                    End = end
+                });
+            }
+        }
+
         private void DuplicateStep(int index)
         {
             serializedObject.Update();
-            
+
             SerializedProperty sourceProperty = stepsProperty.GetArrayElementAtIndex(index);
 
-            // Create a deep copy using JSON (safe for SerializeReference)
+            List<ObjectRefEntry> objectRefs = ExtractObjectRefs(sourceProperty);
+
             object copy = CreateDeepCopyFromProperty(sourceProperty);
             if (copy == null)
             {
@@ -383,11 +570,15 @@ namespace Rehawk.DOTweenSequencing.Editor
             }
 
             int insertIndex = index + 1;
+
             stepsProperty.InsertArrayElementAtIndex(insertIndex);
-            
+
             SerializedProperty destinationProperty = stepsProperty.GetArrayElementAtIndex(insertIndex);
+            destinationProperty.managedReferenceValue = null;
             destinationProperty.managedReferenceValue = copy;
             destinationProperty.isExpanded = true;
+
+            ApplyObjectRefs(destinationProperty, objectRefs);
 
             selectedIndex = insertIndex;
 
@@ -397,21 +588,55 @@ namespace Rehawk.DOTweenSequencing.Editor
         private void CopyStep(int index)
         {
             serializedObject.Update();
-            
-            SerializedProperty sourceProperty = stepsProperty.GetArrayElementAtIndex(index);
-            object obj = sourceProperty.managedReferenceValue;
-            
+
+            SerializedProperty source = stepsProperty.GetArrayElementAtIndex(index);
+            object obj = source.managedReferenceValue;
             if (obj == null)
                 return;
 
-            clipboard = new TweenStepClipboardData
+            var data = new TweenStepClipboardData
             {
                 AssemblyQualifiedTypeName = obj.GetType().AssemblyQualifiedName,
-                Json = EditorJsonUtility.ToJson(obj)
+                Json = EditorJsonUtility.ToJson(obj),
+                ObjectRefs = ExtractObjectRefs(source)
             };
+
+            clipboard = data;
         }
 
-        private void PasteStep(int index)
+        private void PasteAddStep()
+        {
+            if (clipboard == null || string.IsNullOrEmpty(clipboard.AssemblyQualifiedTypeName))
+                return;
+
+            Type type = Type.GetType(clipboard.AssemblyQualifiedTypeName);
+            if (type == null)
+            {
+                Debug.LogWarning($"Paste failed: type not found '{clipboard.AssemblyQualifiedTypeName}'.");
+                return;
+            }
+
+            object instance = Activator.CreateInstance(type);
+            EditorJsonUtility.FromJsonOverwrite(clipboard.Json, instance);
+
+            serializedObject.Update();
+
+            int index = stepsProperty.arraySize;
+            stepsProperty.arraySize++; // safer for SerializeReference than InsertArrayElementAtIndex
+
+            SerializedProperty elementProperty = stepsProperty.GetArrayElementAtIndex(index);
+            bool wasExpanded = elementProperty.isExpanded;
+            elementProperty.managedReferenceValue = instance;
+            elementProperty.isExpanded = wasExpanded;
+
+            ApplyObjectRefs(elementProperty, clipboard.ObjectRefs);
+
+            selectedIndex = index;
+
+            serializedObject.ApplyModifiedProperties();
+        }
+        
+        private void PasteStepReplace(int index)
         {
             if (clipboard == null)
                 return;
@@ -431,14 +656,13 @@ namespace Rehawk.DOTweenSequencing.Editor
 
             serializedObject.Update();
 
-            // Preserve expanded state of the replaced element
-            var element = stepsProperty.GetArrayElementAtIndex(index);
-            bool wasExpanded = element.isExpanded;
+            SerializedProperty elementProperty = stepsProperty.GetArrayElementAtIndex(index);
+            bool wasExpanded = elementProperty.isExpanded;
+            elementProperty.managedReferenceValue = instance;
+            elementProperty.isExpanded = wasExpanded;
 
-            // Replace managed reference value in-place
-            element.managedReferenceValue = instance;
-            element.isExpanded = wasExpanded;
-
+            ApplyObjectRefs(elementProperty, clipboard.ObjectRefs);
+            
             selectedIndex = index;
 
             serializedObject.ApplyModifiedProperties();
@@ -614,6 +838,15 @@ namespace Rehawk.DOTweenSequencing.Editor
             titleRect = new Rect(x, y, Mathf.Max(60f, titleRight - x), 18f);
         }
         
+        private static Rect GetProgressBarSlotRect(Rect elementRect)
+        {
+            float x = elementRect.x + BODY_PADDING;
+            float w = elementRect.width - BODY_PADDING * 2f;
+
+            float y = elementRect.y + HEADER_HEIGHT + 4f;
+            return new Rect(x, y, w, PROGRESS_BAR_HEIGHT);
+        }
+        
         private static void DrawHeaderBackground(Rect rect, bool selected)
         {
             Color previousColor = GUI.color;
@@ -633,19 +866,15 @@ namespace Rehawk.DOTweenSequencing.Editor
             GUI.Label(headerRect, new GUIContent(string.Empty, tooltip));
         }
         
-        private static object CreateDeepCopyFromProperty(SerializedProperty sourceProperty)
+        private static void DrawProgressBarBorder(Rect barRect)
         {
-            object obj = sourceProperty.managedReferenceValue;
-            
-            if (obj == null) 
-                return null;
-
-            Type type = obj.GetType();
-            object instance = Activator.CreateInstance(type);
-            EditorJsonUtility.FromJsonOverwrite(EditorJsonUtility.ToJson(obj), instance);
-            return instance;
+            var border = EditorGUIUtility.isProSkin ? new Color(0f, 0f, 0f, 0.35f) : new Color(0f, 0f, 0f, 0.25f);
+            EditorGUI.DrawRect(new Rect(barRect.x, barRect.y, barRect.width, 1f), border);
+            EditorGUI.DrawRect(new Rect(barRect.x, barRect.yMax - 1f, barRect.width, 1f), border);
+            EditorGUI.DrawRect(new Rect(barRect.x, barRect.y, 1f, barRect.height), border);
+            EditorGUI.DrawRect(new Rect(barRect.xMax - 1f, barRect.y, 1f, barRect.height), border);
         }
-
+        
         private static void DrawManagedRefChildrenPrioritized(Rect rect, SerializedProperty managedRefProperty, string[] priorityNames,
                                                               string[] excludeNames)
         {
@@ -772,12 +1001,105 @@ namespace Rehawk.DOTweenSequencing.Editor
 
             return total;
         }
+        
+        private static object CreateDeepCopyFromProperty(SerializedProperty sourceProperty)
+        {
+            object obj = sourceProperty.managedReferenceValue;
+            
+            if (obj == null) 
+                return null;
+
+            Type type = obj.GetType();
+            object instance = Activator.CreateInstance(type);
+            EditorJsonUtility.FromJsonOverwrite(EditorJsonUtility.ToJson(obj), instance);
+            return instance;
+        }
+
+        private static List<ObjectRefEntry> ExtractObjectRefs(SerializedProperty root)
+        {
+            var result = new List<ObjectRefEntry>();
+
+            SerializedProperty it = root.Copy();
+            SerializedProperty end = it.GetEndProperty();
+
+            bool enterChildren = true;
+            while (it.NextVisible(enterChildren) && !SerializedProperty.EqualContents(it, end))
+            {
+                enterChildren = false;
+
+                if (it.propertyType == SerializedPropertyType.ObjectReference)
+                {
+                    // Relative path from the step root, so we can FindPropertyRelative on paste
+                    string rel = GetRelativePath(root.propertyPath, it.propertyPath);
+                    if (!string.IsNullOrEmpty(rel))
+                    {
+                        result.Add(new ObjectRefEntry
+                        {
+                            RelativePath = rel,
+                            Value = it.objectReferenceValue
+                        });
+                    }
+                }
+            }
+
+            return result;
+        }
+        
+        private static void ApplyObjectRefs(SerializedProperty root, List<ObjectRefEntry> references)
+        {
+            if (references == null || references.Count == 0)
+                return;
+
+            foreach (ObjectRefEntry reference in references)
+            {
+                if (string.IsNullOrEmpty(reference.RelativePath))
+                    continue;
+
+                SerializedProperty property = root.FindPropertyRelative(reference.RelativePath);
+                if (property == null)
+                    continue;
+
+                if (property.propertyType != SerializedPropertyType.ObjectReference)
+                    continue;
+
+                property.objectReferenceValue = reference.Value;
+            }
+        }
+
+        private static string GetRelativePath(string rootPath, string childPath)
+        {
+            // childPath starts with rootPath + "."
+            if (string.IsNullOrEmpty(rootPath) || string.IsNullOrEmpty(childPath))
+                return null;
+
+            if (childPath == rootPath)
+                return ""; // root itself
+
+            if (!childPath.StartsWith(rootPath, StringComparison.Ordinal))
+                return null;
+
+            int start = rootPath.Length;
+            if (childPath.Length > start && childPath[start] == '.')
+                start++;
+
+            return childPath.Substring(start);
+        }
+
+        private static float GetStepDelaySeconds(SerializedProperty stepProperty)
+        {
+            return Mathf.Max(0f, GetFloatOrInt(stepProperty.FindPropertyRelative("delay")));
+        }
+
+        private static float GetStepDurationSeconds(SerializedProperty stepProperty)
+        {
+            return Mathf.Max(0f, GetFloatOrInt(stepProperty.FindPropertyRelative("duration")));
+        }
 
         private static float GetStepLengthSeconds(SerializedProperty stepProperty)
         {
             // Convention: delay + duration
-            float delay = GetFloatOrInt(stepProperty.FindPropertyRelative("delay"));
-            float duration = GetFloatOrInt(stepProperty.FindPropertyRelative("duration"));
+            float delay = GetStepDelaySeconds(stepProperty);
+            float duration = GetStepDurationSeconds(stepProperty);
 
             // Some steps might not have "delay" or "duration" -> treat missing as 0
             float len = Mathf.Max(0f, delay) + Mathf.Max(0f, duration);
@@ -873,6 +1195,13 @@ namespace Rehawk.DOTweenSequencing.Editor
                 return name;
             
             return name.EndsWith("Step", StringComparison.Ordinal) ? name.Substring(0, name.Length - 4) : name;
+        }
+        
+        private struct StepTiming
+        {
+            public float ScheduledStart;
+            public float DelayEnd;
+            public float End;
         }
     }
 }

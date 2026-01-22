@@ -16,10 +16,10 @@ namespace Rehawk.DOTweenSequencing
     public class DOTweenSequencer : MonoBehaviour
     {
         [Tooltip("If true, the sequence will automatically play when this component is enabled.")]
-        [SerializeField] private bool playOnEnable = true;
+        [SerializeField] private bool playOnEnable = false;
 
         [Tooltip("If true and Play On Enable is active, the sequence will restart from the beginning when enabled. If false, it will continue from its current position.")]
-        [SerializeField] private bool restartOnEnable = true;
+        [SerializeField] private bool restartOnEnable = false;
  
         [Tooltip("If true, the sequence will be automatically killed when it completes.")]
         [SerializeField] private bool autoKill = false;
@@ -79,6 +79,12 @@ namespace Rehawk.DOTweenSequencing
         /// </para>
         /// </summary>
         public PlayDirection LastDirection { get; private set; } = PlayDirection.Forward;
+        
+#if UNITY_EDITOR
+        public float EditorElapsed => sequence?.Elapsed(includeLoops: false) ?? 0f;
+        public float EditorDuration => sequence?.Duration(includeLoops: false) ?? 0f;
+        public bool HasSequence => sequence != null && sequence.IsActive();
+#endif
 
         /// <summary>
         /// Raised when the sequence starts playing (in sync with <see cref="onStarted"/>).

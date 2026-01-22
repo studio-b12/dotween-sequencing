@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Rehawk.DOTweenSequencing.Editor
 {
@@ -7,5 +8,14 @@ namespace Rehawk.DOTweenSequencing.Editor
     {
         public string AssemblyQualifiedTypeName;
         public string Json;
+        
+        public List<ObjectRefEntry> ObjectRefs = new();
+    }
+
+    [Serializable]
+    public struct ObjectRefEntry
+    {
+        public string RelativePath;
+        public UnityEngine.Object Value;
     }
 }

@@ -16,6 +16,7 @@ namespace Rehawk.DOTweenSequencing.Editor
             : base(state)
         {
             this.onPick = onPick;
+
             items = stepTypes.Select(t => (t, GetMenuPath(t)))
                              .OrderBy(x => x.Item2, StringComparer.OrdinalIgnoreCase)
                              .ToList();
@@ -49,12 +50,13 @@ namespace Rehawk.DOTweenSequencing.Editor
                 }
 
                 string leaf = parts.Length > 0 ? parts[^1] : ObjectNames.NicifyVariableName(type.Name);
-                parent.AddChild(new StepItem(leaf, type));
+                string name = path.Replace("/", " > ");
+                parent.AddChild(new StepItem(type, path, leaf, name));
             }
 
             return root;
         }
-
+        
         protected override void ItemSelected(AdvancedDropdownItem item)
         {
             if (item is StepItem stepItem)
@@ -66,29 +68,37 @@ namespace Rehawk.DOTweenSequencing.Editor
             string stepName = t.Name.EndsWith("Step", StringComparison.Ordinal)
                 ? t.Name.Substring(0, t.Name.Length - 4)
                 : t.Name;
+
             stepName = ObjectNames.NicifyVariableName(stepName);
 
-            var attribute = (TweenStepPathAttribute)Attribute.GetCustomAttribute(t, typeof(TweenStepPathAttribute));
-            
+            var attribute = (TweenStepAttribute)Attribute.GetCustomAttribute(t, typeof(TweenStepAttribute));
+
             if (attribute != null && !string.IsNullOrWhiteSpace(attribute.Path))
             {
                 string path = attribute.Path.Trim();
 
                 if (path.Contains("/"))
                     return $"{path.Trim('/')}";
-
+                
                 stepName = path;
             }
 
             string namespaceName = string.IsNullOrEmpty(t.Namespace) ? "" : t.Namespace.Replace('.', '/');
-
             return $"{namespaceName}/{stepName}";
         }
-        
+
         private sealed class StepItem : AdvancedDropdownItem
         {
             public readonly Type StepType;
-            public StepItem(string name, Type stepType) : base(name) => StepType = stepType;
+            public readonly string FullPath;
+            public readonly string Leaf;
+
+            public StepItem(Type stepType, string fullPath, string leaf, string name) : base(name)
+            {
+                StepType = stepType;
+                FullPath = fullPath;
+                Leaf = leaf;
+            }
         }
     }
 }

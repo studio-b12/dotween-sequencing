@@ -5,10 +5,11 @@ using UnityEngine;
 namespace Rehawk.DOTweenSequencing
 {
     [Serializable]
-    [TweenStepPath("Camera/Ortho Size")]
+    [TweenStep("Camera/Ortho Size")]
     public class CameraOrthoSizeStep : TweenStepWithTweenOptions<Camera>
     {
         [SerializeField] private float duration = 0.5f;
+        [TweenValueDrawer("Orthographic Size")]
         [SerializeField] private TweenValue<float> values = new(5f);
 
         protected override Tween CreateTween()

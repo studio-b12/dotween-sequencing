@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Rehawk.DOTweenSequencing
 {
     [Serializable]
-    [TweenStepPath("Transform/Punch/Scale")]
+    [TweenStep("Transform/Punch/Scale")]
     public class TransformPunchScaleStep : TweenStepWithTweenOptions<Transform>
     {
         [SerializeField] private Vector3 punch = Vector3.one * 0.2f;

@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Rehawk.DOTweenSequencing
 {
     [Serializable]
-    [TweenStepPath("Misc/Interval")]
+    [TweenStep("Misc/Interval")]
     public class IntervalStep : TweenStepBase
     {
         [SerializeField] private float duration = 0.25f;

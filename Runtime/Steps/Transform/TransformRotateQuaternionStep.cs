@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Rehawk.DOTweenSequencing
 {
     [Serializable]
-    [TweenStepPath("Transform/Rotate Quaternion")]
+    [TweenStep("Transform/Rotate Quaternion")]
     public class TransformRotateQuaternionStep : TweenStepWithTweenOptions<Transform>
     {
         [SerializeField] private TweenValue<Quaternion> values;
